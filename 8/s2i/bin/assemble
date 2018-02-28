@@ -55,6 +55,14 @@ if [ -n "$NPM_MIRROR" ]; then
 	npm config set registry $NPM_MIRROR
 fi
 
+if [ -f yarn.lock ]; then
+    echo "-----> Defaulting to yarn (yarn.lock found)"
+    CMD_INSTALL_PACKAGES='yarn install --production=false'
+else
+    echo "-----> Defaulting to NPM (no yarn.lock was found)"
+    CMD_INSTALL_PACKAGES='npm install'
+fi
+
 # Set the DEV_MODE to false by default.
 if [ -z "$DEV_MODE" ]; then
   export DEV_MODE=false
@@ -73,33 +81,37 @@ fi
 if [ "$NODE_ENV" != "production" ]; then
 
 	echo "---> Building your Node application from source"
-	npm install
+	eval $CMD_INSTALL_PACKAGES
 
 else
 
 	echo "---> Installing all dependencies"
-	NODE_ENV=development npm install
+	NODE_ENV=development
+	eval $CMD_INSTALL_PACKAGES
 
 	#do not fail when there is no build script
 	echo "---> Building in production mode"
 	npm run build --if-present
 
-	echo "---> Pruning the development dependencies"
-	npm prune
+	if [ -f yarn.lock ]; then
+    echo "---> Skipping pruning the development dependencies"
+	else
+    echo "---> Pruning the development dependencies"
+    npm prune
 
-	# Clear the npm's cache and tmp directories only if they are not a docker volumes
-	NPM_CACHE=$(npm config get cache)
-	if ! mountpoint $NPM_CACHE; then
-		echo "---> Cleaning the npm cache $NPM_CACHE"
-		#As of npm@5 even the 'npm cache clean --force' does not fully remove the cache directory
-		rm $NPM_CACHE* -rf
-	fi
-	NPM_TMP=$(npm config get tmp)
-	if ! mountpoint $NPM_TMP; then
-		echo "---> Cleaning the $NPM_TMP/npm-*"
-		rm -rf $NPM_TMP/npm-*
-	fi
-
+    # Clear the npm's cache and tmp directories only if they are not a docker volumes
+    NPM_CACHE=$(npm config get cache)
+    if ! mountpoint $NPM_CACHE; then
+      echo "---> Cleaning the npm cache $NPM_CACHE"
+      #As of npm@5 even the 'npm cache clean --force' does not fully remove the cache directory
+      rm $NPM_CACHE* -rf
+    fi
+    NPM_TMP=$(npm config get tmp)
+    if ! mountpoint $NPM_TMP; then
+      echo "---> Cleaning the $NPM_TMP/npm-*"
+      rm -rf $NPM_TMP/npm-*
+    fi
+  fi
 fi
 
 # Fix source directory permissions

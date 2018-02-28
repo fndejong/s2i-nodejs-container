@@ -30,6 +30,7 @@ fast, scalable network applications. Node.js uses an event-driven, non-blocking 
 that makes it lightweight and efficient, perfect for data-intensive real-time applications \
 that run across distributed devices."
 
+
 LABEL summary="$SUMMARY" \
       description="$DESCRIPTION" \
       io.k8s.description="$DESCRIPTION" \
@@ -56,6 +57,18 @@ RUN yum install -y centos-release-scl-rh && \
     yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
     rpm -V $INSTALL_PKGS && \
     yum clean all -y
+    
+RUN wget -qO- https://dl.yarnpkg.com/debian/pubkey.gpg | gpg --import &&\
+    cd /opt && \
+    wget https://github.com/yarnpkg/yarn/releases/download/v1.5.1/yarn-v1.5.1.tar.gz.asc &&\
+    wget https://github.com/yarnpkg/yarn/releases/download/v1.5.1/yarn-v1.5.1.tar.gz && \
+    gpg --verify yarn-v1.5.1.tar.gz.asc yarn-v1.5.1.tar.gz &&\
+    tar zvxf yarn-v1.5.1.tar.gz  && \
+    rm yarn-v1.5.1.tar.gz.asc && \
+    rm yarn-v1.5.1.tar.gz && \
+    cd /
+    
+ENV PATH=/opt/yarn-v1.5.1/bin:$PATH
 
 # Copy the S2I scripts from the specific language image to $STI_SCRIPTS_PATH
 COPY ./s2i/bin/ $STI_SCRIPTS_PATH
