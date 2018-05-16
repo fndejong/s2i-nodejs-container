@@ -114,5 +114,11 @@ else
   fi
 fi
 
+echo "---> Installing application to web container"
+cp -Rf ./dist/* /usr/share/nginx/html/
+
+echo "---> Removing application source"
+rm -r ./*
+
 # Fix source directory permissions
 fix-permissions ./

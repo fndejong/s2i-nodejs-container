@@ -49,10 +49,10 @@ LABEL summary="$SUMMARY" \
       help="For more information visit https://github.com/sclorg/s2i-nodejs-container" \
       usage="s2i build <SOURCE-REPOSITORY> centos/$NAME-$NODEJS_VERSION-centos7:latest <APP-NAME>"
 
-RUN yum install -y centos-release-scl-rh && \
+RUN yum install -y centos-release-scl-rh epel-release && \
     yum remove -y rh-nodejs6\* && \
     yum-config-manager --enable centos-sclo-rh-testing && \
-    INSTALL_PKGS="rh-nodejs8 rh-nodejs8-npm rh-nodejs8-nodejs-nodemon nss_wrapper" && \
+    INSTALL_PKGS="rh-nodejs8 rh-nodejs8-npm rh-nodejs8-nodejs-nodemon nss_wrapper nginx" && \
     ln -s /usr/lib/node_modules/nodemon/bin/nodemon.js /usr/bin/nodemon && \
     yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
     rpm -V $INSTALL_PKGS && \
@@ -60,15 +60,31 @@ RUN yum install -y centos-release-scl-rh && \
     
 RUN wget -qO- https://dl.yarnpkg.com/debian/pubkey.gpg | gpg --import &&\
     cd /opt && \
-    wget https://github.com/yarnpkg/yarn/releases/download/v1.5.1/yarn-v1.5.1.tar.gz.asc &&\
-    wget https://github.com/yarnpkg/yarn/releases/download/v1.5.1/yarn-v1.5.1.tar.gz && \
-    gpg --verify yarn-v1.5.1.tar.gz.asc yarn-v1.5.1.tar.gz &&\
-    tar zvxf yarn-v1.5.1.tar.gz  && \
-    rm yarn-v1.5.1.tar.gz.asc && \
-    rm yarn-v1.5.1.tar.gz && \
+    wget https://github.com/yarnpkg/yarn/releases/download/v1.6.0/yarn-v1.6.0.tar.gz.asc &&\
+    wget https://github.com/yarnpkg/yarn/releases/download/v1.6.0/yarn-v1.6.0.tar.gz && \
+    gpg --verify yarn-v1.6.0.tar.gz.asc yarn-v1.6.0.tar.gz &&\
+    tar zvxf yarn-v1.6.0.tar.gz  && \
+    rm yarn-v1.6.0.tar.gz.asc && \
+    rm yarn-v1.6.0.tar.gz && \
     cd /
     
-ENV PATH=/opt/yarn-v1.5.1/bin:$PATH
+# Change the default port for nginx
+# Required if you plan on running images as a non-root user).
+RUN sed -i 's/80/8080/' /etc/nginx/nginx.conf
+RUN sed -i 's/user nginx;//' /etc/nginx/nginx.conf
+
+RUN chgrp -R 1001 /usr/share/nginx \
+  && chmod -R 777 /usr/share/nginx
+RUN chgrp -R 1001 /var/log/nginx \
+  && chmod -R 777 /var/log/nginx
+RUN chgrp -R 1001 /var/lib/nginx \
+  && chmod -R 777 /var/lib/nginx
+RUN chmod -R 777 /etc/nginx/
+RUN touch /run/nginx.pid
+RUN chgrp -R 1001 /run/nginx.pid \
+&& chmod -R 777 /run/nginx.pid
+    
+ENV PATH=/opt/yarn-v1.6.0/bin:$PATH
 
 # Copy the S2I scripts from the specific language image to $STI_SCRIPTS_PATH
 COPY ./s2i/bin/ $STI_SCRIPTS_PATH
